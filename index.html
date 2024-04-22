@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Block CYOA Editor (BCE)</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        p {
+            margin: 0;
+            padding: 0;
+        }
+
+        
+        * {
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10 and IE 11 */
+            user-select: none; /* Standard syntax */
+        }
+
+        .focused {
+            outline: 1px dashed red;
+        }
+
+        #main {
+            border: 1px solid red;
+
+            display: flex;
+            flex-direction: row;
+
+            gap: 1vw;
+
+            width: 98vw;
+            height: 98vh;
+
+            padding-left: 1vw;
+            padding-right: 1vw;
+            padding-top: 1vh;
+            padding-bottom: 1vh;
+
+            margin: 0;
+        }
+        #editor {
+            width: 20vw;
+            
+            border: 1px solid black;
+            padding: 1vw;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+
+            gap : 0.5vw;
+
+            & > #title-text {
+                font-size: 2vw;
+                font-family: Georgia, 'Times New Roman', Times, serif;
+            }
+        }
+
+        #preview {
+            width: calc(80vw - 3vw);
+            height: 43.3125vw;
+            border: 1px solid black;
+        }
+
+        #new-element-container {
+            border: 1px solid black;
+            padding: 1vw;
+            
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+
+            gap : 0.5vw;
+        }
+        #element-property-container {
+            border: 1px solid black;
+            padding: 1vw;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+
+            gap : 0.5vw;
+
+            & > input {
+                width: 100%;
+            }
+
+            & > p {
+                font-weight: bold;
+            }
+        }
+    </style>
+</head>
+<body>
+    <script type="text/javascript">
+        let preview, vw, vh, focusedElement;
+        const version = "0.0.1";
+        
+        document.body.onload = main;
+
+        function main(){
+            // set title
+            document.getElementById("title-text").innerText = "BCE v" + version;
+
+            // set preview
+            preview = document.getElementById("preview");
+            vw = window.innerWidth;
+            vh = window.innerHeight;
+        }
+
+        function createTextElement() {
+            const textElement = document.createElement("div");
+            textElement.innerText = "Text Element";
+
+            textElement.style.position = "absolute"
+            textElement.style.left = 50*0.77+"vw";
+
+            setMovable(textElement);
+
+            // Edit text
+            textElement.ondblclick = function(){
+                const text = prompt("텍스트를 입력하세요.", textElement.innerText);
+                if ((text == null) || (text.replaceAll(" ", "") == "")) {
+                    alert("텍스트를 입력해주세요.");
+                    return;
+                }
+
+                textElement.innerText = text;
+            }
+
+            preview.appendChild(textElement);
+        }
+
+        function createImageElement() {
+            const imageElement = document.createElement("img");
+            imageElement.src = "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png";
+
+            imageElement.style.position = "absolute"
+            imageElement.style.left = 50*0.77+"vw";
+
+            setMovable(imageElement);
+
+            imageElement.ondblclick = function(){
+                const url = prompt("이미지 URL을 입력하세요.", imageElement.src);
+                if ((url == null) || (url.replaceAll(" ", "") == "")) {
+                    alert("URL을 입력해주세요.");
+                    return;
+                }
+
+                imageElement.src = url;
+            }
+
+            preview.appendChild(imageElement);
+        }
+
+        function setEditProperty(element) {
+            focusedElement = element;
+
+            document.getElementById("element-property").value = element.innerText;
+            document.getElementById("element-property-fontSize").value = Math.floor(parseFloat(element.style.fontSize.replace("vw", ""))/100*vw);
+            document.getElementById("element-property-width").value = Math.floor(parseFloat(element.style.width.replace("vw", ""))/100*vw);
+            document.getElementById("element-property-URL").value = element.src;
+
+        }
+
+        function editProperty() {
+            if (focusedElement == null) return;
+
+            const property = document.getElementById("element-property");
+            const range = document.getElementById("element-property-fontSize");
+
+            focusedElement.innerText = property.value;
+            focusedElement.style.fontSize = range.value/vw * 100 + "vw";
+
+            // width
+            focusedElement.style.width = document.getElementById("element-property-width").value/vw * 100 + "vw";
+
+            // url
+            if (focusedElement.tagName == "IMG") {
+                const url = document.getElementById("element-property-URL").value;
+                focusedElement.src = url;
+            }
+
+
+        }
+
+        // All mouse events
+        document.onmousedown = function(event){
+            // remove all focused class
+            const focused = document.getElementsByClassName("focused");
+
+            for (let i = 0; i < focused.length; i++){
+                // except for clicked element(target)
+                if (focused[i] == event.target) continue;
+
+                focused[i].classList.remove("focused");
+            }
+        }
+
+        document.addEventListener("keydown", function(event){
+            if (event.key == "Escape") {
+                const focused = document.getElementsByClassName("focused");
+                for (let i = 0; i < focused.length; i++){
+                    focused[i].classList.remove("focused");
+                }
+
+                // remove all mousemove event
+                const movable = document.getElementsByClassName("movable");
+                for (let i = 0; i < movable.length; i++) {
+                    movable[i].onMouseMoveEvent = null;
+                }
+            }
+        });
+
+        function setMovable(element, step_pixel = 10) {
+            function quantize(value, step) {
+                return Math.round(value / step) * step;
+            }
+
+            // On blur (on click outside)
+            element.onblur = function(){
+                element.classList.remove("focused");
+                element.onMouseMoveEvent = null;
+            }
+
+            // Move text
+            element.onmousedown = function(event) {
+                if (element.onmouseup != null) {
+                    console.log("Already moving");
+                    return;
+                };
+
+                element.classList.add("movable");
+                element.classList.add("focused");
+
+                // set focused element
+                setEditProperty(element);
+                
+
+                let shiftX = event.clientX - element.getBoundingClientRect().left;
+                let shiftY = event.clientY - element.getBoundingClientRect().top;
+              
+                element.style.position = 'absolute';
+                element.style.zIndex = 1000;
+                //document.body.append(element);
+              
+                moveAt(event.pageX, event.pageY);
+              
+                function moveAt(pageX, pageY) {
+                  element.style.left = quantize(pageX - shiftX, step_pixel) + 'px';
+                  element.style.top = quantize(pageY - shiftY, step_pixel) + 'px';
+                }
+              
+                element.onMouseMoveEvent = (event) => {
+                  moveAt(event.pageX, event.pageY);
+                }
+              
+                document.addEventListener('mousemove', element.onMouseMoveEvent);
+
+                element.onmouseup = () => {
+                    document.removeEventListener('mousemove', element.onMouseMoveEvent);
+                    element.onmouseup = null;
+                };
+              };
+              
+              element.ondragstart = function() {
+                return false;
+              };
+        }
+    </script>
+
+    <div id="main">
+        <div id="editor">
+            <p id="title-text"></p>
+
+            <div id="new-element-container">
+                <input type="button" id="new-block" onclick="createTextElement()" value="새 텍스트 추가"/>
+                <button id="new-image" onclick="createImageElement()">새 이미지 객체</button>
+            </div>
+
+            <div id="element-property-container">
+                <p>텍스트 편집</p>
+                <input type="text" id="element-property" placeholder="내용" onchange="editProperty()"/>
+                <p>폰트 크기</p>
+                <input type="range" id="element-property-fontSize" min="0" max="100" value="50" onchange="editProperty()"/>
+                <p>이미지 URL</p>
+                <input type="text" id="element-property-URL" placeholder="URL" onchange="editProperty()"/>
+                <p>너비</p>
+                <input type="range" id="element-property-width" min="0" max="1000" value="505" onchange="editProperty()"/>
+            </div>
+        </div>
+        <div>
+            <p>Preview</p>
+            <div id="preview">
+            </div>
+        </div>
+    </div>
+</body>
+</html>

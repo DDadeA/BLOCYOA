@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Block CYOA Editor (BCE)</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+</head>
+<body>
+    <div id="main">
+        <div id="resizable-div" style="width: 300px; height: 200px; position: relative; background-color: lightgrey;">
+            <div id="resize-handle" style="width: 10px; height: 10px; position: absolute; bottom: 0; right: 0; background-color: black; cursor: se-resize;"></div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        const resizableDiv = document.getElementById('resizable-div');
+        const resizeHandle = document.getElementById('resize-handle');
+
+        let originalWidth, originalHeight, originalMouseX, originalMouseY;
+
+        resizeHandle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            originalWidth = parseFloat(getComputedStyle(resizableDiv, null).getPropertyValue('width').replace('px', ''));
+            originalHeight = parseFloat(getComputedStyle(resizableDiv, null).getPropertyValue('height').replace('px', ''));
+            originalMouseX = e.pageX;
+            originalMouseY = e.pageY;
+
+            window.addEventListener('mousemove', resize);
+            window.addEventListener('mouseup', stopResize);
+        });
+
+        function resize(e) {
+            const width = originalWidth + (e.pageX - originalMouseX);
+            const height = originalHeight + (e.pageY - originalMouseY);
+            resizableDiv.style.width = `${width}px`;
+            resizableDiv.style.height = `${height}px`;
+        }
+
+        function stopResize() {
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResize);
+        }
+
+    </script>
+
+
+</body>
+</html>
